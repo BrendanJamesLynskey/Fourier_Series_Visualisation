@@ -274,6 +274,32 @@ const WAVEFORMS = [
     hasDiscontinuity: true
   },
   {
+    id: 'pulse-narrow',
+    name: 'Narrow Pulse',
+    formula: 'f(x) = d/\u03c0 + (2/\u03c0) \u2211 sin(nd/2)/(nd/2) cos(nx),  d = \u03c0/4',
+    description: 'A narrow pulse of width d = \u03c0/4. The narrower the pulse, the wider the sinc envelope in the frequency domain \u2014 more harmonics carry significant energy, and the spectrum decays more slowly.',
+    f(x) { const d = PI / 4; return (Math.abs(x) <= d / 2) ? 1 : 0; },
+    coeffs(n) {
+      const d = PI / 4;
+      if (n === 0) return { a0: 2 * d / PI, an: 0, bn: 0 };
+      return { a0: d / PI, an: (2 / (PI * n)) * Math.sin(n * d / 2), bn: 0 };
+    },
+    hasDiscontinuity: true
+  },
+  {
+    id: 'pulse-wide',
+    name: 'Wide Pulse',
+    formula: 'f(x) = d/\u03c0 + (2/\u03c0) \u2211 sin(nd/2)/(nd/2) cos(nx),  d = 3\u03c0/4',
+    description: 'A wide pulse of width d = 3\u03c0/4. The wider the pulse, the narrower the sinc lobes become \u2014 energy concentrates in the low harmonics, and the first sinc null appears earlier.',
+    f(x) { const d = 3 * PI / 4; return (Math.abs(x) <= d / 2) ? 1 : 0; },
+    coeffs(n) {
+      const d = 3 * PI / 4;
+      if (n === 0) return { a0: 2 * d / PI, an: 0, bn: 0 };
+      return { a0: d / PI, an: (2 / (PI * n)) * Math.sin(n * d / 2), bn: 0 };
+    },
+    hasDiscontinuity: true
+  },
+  {
     id: 'halfrect',
     name: 'Half-wave Rectified Sine',
     formula: 'f(x) = 1/\u03c0 + sin(x)/2 \u2212 (2/\u03c0) \u2211 cos(2kx)/(4k\u00b2\u22121)',
