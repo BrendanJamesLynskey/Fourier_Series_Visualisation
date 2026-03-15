@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fourier Series Visualisations</title>
+<script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+<style>
+:root {
+  --bg: #0f0f13;
+  --surface: #1a1a24;
+  --border: #2a2a3a;
+  --text: #e0e0e8;
+  --muted: #8888a0;
+  --accent: #6c8cff;
+  --accent2: #ff6c8c;
+  --accent3: #6cffc8;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 2rem;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+header h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent3));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.35rem;
+}
+
+header p {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+/* Waveform selector */
+.selector {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.selector button {
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.selector button:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.selector button.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.card-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.card-header h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.card-header .formula {
+  color: var(--accent);
+  font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+  font-size: 0.95rem;
+}
+
+.description {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+/* Slider */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.slider-row label {
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.slider-row input[type=range] {
+  flex: 1;
+  min-width: 150px;
+  accent-color: var(--accent);
+  height: 6px;
+}
+
+.slider-row .value-badge {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 2.5rem;
+  text-align: center;
+}
+
+/* Plots */
+.plot-wrap {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.hint {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-top: 0.75rem;
+}
+
+footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  padding-top: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  header h1 { font-size: 1.5rem; }
+  .card { padding: 0.9rem; }
+  .selector button { font-size: 0.78rem; padding: 0.3rem 0.7rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Fourier Series Visualisations</h1>
+    <p>Build periodic waveforms term by term &mdash; explore convergence &amp; Gibbs phenomenon</p>
+  </header>
+
+  <div class="selector" id="waveform-selector"></div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 id="waveform-title">Square Wave</h2>
+      <span class="formula" id="waveform-formula"></span>
+    </div>
+    <p class="description" id="waveform-desc"></p>
+
+    <div class="slider-row">
+      <label for="harmonics-slider">Harmonics</label>
+      <input type="range" id="harmonics-slider" min="1" max="50" value="5">
+      <span class="value-badge" id="harmonics-value">5</span>
+    </div>
+
+    <div class="plot-wrap" id="main-plot"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Frequency Spectrum</h2>
+    </div>
+    <div class="plot-wrap" id="spectrum-plot"></div>
+  </div>
+
+  <p class="hint">Drag to pan &middot; Scroll to zoom &middot; Double-click to reset</p>
+  <footer>&copy; 2026 &mdash; Vanilla HTML / CSS / JS + Plotly.js</footer>
+</div>
+
+<script>
+/* ======================================================================
+   Waveform definitions
+   ====================================================================== */
+
+const PI = Math.PI;
+
+const WAVEFORMS = [
+  {
+    id: 'square',
+    name: 'Square Wave',
+    formula: 'f(x) = (4/\u03c0) \u2211 sin((2k\u22121)x)/(2k\u22121)',
+    description: 'The quintessential example of Fourier series: only odd harmonics are present. The 9% overshoot at discontinuities is the classic Gibbs phenomenon \u2014 it persists no matter how many terms you add.',
+    f(x) { return x >= 0 ? 1 : -1; },
+    coeffs(n) {
+      return { a0: 0, an: 0, bn: (n % 2 === 1) ? 4 / (PI * n) : 0 };
+    },
+    hasDiscontinuity: true
+  },
+  {
+    id: 'sawtooth',
+    name: 'Sawtooth',
+    formula: 'f(x) = \u2212(2/\u03c0) \u2211 (\u22121)\u207f sin(nx)/n',
+    description: 'A linearly rising ramp that resets abruptly. All harmonics are present, with amplitudes falling as 1/n. The slow convergence and sharp jump make Gibbs overshoot clearly visible.',
+    f(x) { return x / PI; },
+    coeffs(n) {
+      return { a0: 0, an: 0, bn: -2 * Math.pow(-1, n) / (PI * n) };
+    },
+    hasDiscontinuity: true
+  },
+  {
+    id: 'triangle',
+    name: 'Triangle',
+    formula: 'f(x) = (8/\u03c0\u00b2) \u2211 (\u22121)\u1d4f sin((2k\u22121)x)/(2k\u22121)\u00b2',
+    description: 'Only odd harmonics, with amplitudes decaying as 1/n\u00b2 \u2014 much faster convergence than the square wave. The function is continuous everywhere, so there is no Gibbs phenomenon.',
+    f(x) { return 1 - 2 * Math.abs(x) / PI; },
+    coeffs(n) {
+      if (n % 2 === 0) return { a0: 0, an: 0, bn: 0 };
+      const k = (n - 1) / 2;
+      return { a0: 0, an: 0, bn: 8 * Math.pow(-1, k) / (PI * PI * n * n) };
+    },
+    hasDiscontinuity: false
+  },
+  {
+    id: 'pulse',
+    name: 'Pulse Train',
+    formula: 'f(x) = d/\u03c0 + (2/\u03c0) \u2211 sin(nd/2)/(nd/2) cos(nx)',
+    description: 'A narrow rectangular pulse of width d = \u03c0/2 centred at zero. The spectrum follows a sinc envelope \u2014 fundamental to sampling theory and signal processing. Gibbs ringing appears at both edges.',
+    f(x) { const d = PI / 2; return (Math.abs(x) <= d / 2) ? 1 : 0; },
+    coeffs(n) {
+      const d = PI / 2;
+      if (n === 0) return { a0: 2 * d / PI, an: 0, bn: 0 };
+      return { a0: d / PI, an: (2 / (PI * n)) * Math.sin(n * d / 2), bn: 0 };
+    },
+    hasDiscontinuity: true
+  },
+  {
+    id: 'halfrect',
+    name: 'Half-wave Rectified Sine',
+    formula: 'f(x) = 1/\u03c0 + sin(x)/2 \u2212 (2/\u03c0) \u2211 cos(2kx)/(4k\u00b2\u22121)',
+    description: 'The positive half of a sine wave; the negative half is zeroed out. This is the waveform produced by a half-wave rectifier in electronics. Even harmonics dominate the spectrum.',
+    f(x) { return Math.max(0, Math.sin(x)); },
+    coeffs(n) {
+      const a0 = 2 / PI;
+      if (n === 0) return { a0, an: 0, bn: 0 };
+      if (n === 1) return { a0: a0 / 2, an: 0, bn: 0.5 };
+      if (n % 2 === 1) return { a0: a0 / 2, an: 0, bn: 0 };
+      const an = -2 / (PI * (n * n - 1));
+      return { a0: a0 / 2, an, bn: 0 };
+    },
+    hasDiscontinuity: false
+  },
+  {
+    id: 'fullrect',
+    name: 'Full-wave Rectified Sine',
+    formula: 'f(x) = 2/\u03c0 \u2212 (4/\u03c0) \u2211 cos(2nx)/(4n\u00b2\u22121)',
+    description: 'The absolute value of sin(x) \u2014 equivalent to the output of a full-wave bridge rectifier. Only even cosine harmonics appear and convergence is rapid since the function is continuous.',
+    f(x) { return Math.abs(Math.sin(x)); },
+    coeffs(n) {
+      const a0 = 4 / PI;
+      if (n === 0) return { a0, an: 0, bn: 0 };
+      if (n % 2 === 1) return { a0: a0 / 2, an: 0, bn: 0 };
+      const an = -4 / (PI * (n * n - 1));
+      return { a0: a0 / 2, an, bn: 0 };
+    },
+    hasDiscontinuity: false
+  },
+  {
+    id: 'parabolic',
+    name: 'Parabolic Wave',
+    formula: 'f(x) = \u03c0\u00b2/3 + 4 \u2211 (\u22121)\u207f cos(nx)/n\u00b2',
+    description: 'A periodic extension of x\u00b2. Coefficients decay as 1/n\u00b2, giving fast convergence. This series famously yields \u03c0\u00b2/6 = \u2211 1/n\u00b2 when evaluated at x = \u03c0 (Basel problem).',
+    f(x) { return x * x; },
+    coeffs(n) {
+      const a0 = PI * PI / 3;
+      if (n === 0) return { a0, an: 0, bn: 0 };
+      const an = 4 * Math.pow(-1, n) / (n * n);
+      return { a0: a0 / 2, an, bn: 0 };
+    },
+    hasDiscontinuity: false
+  },
+  {
+    id: 'trapezoidal',
+    name: 'Trapezoidal Wave',
+    formula: 'f(x) = (8/\u03c0\u00b2d) \u2211 sin(nd/2) sin((2k\u22121)x)/(2k\u22121)\u00b2',
+    description: 'A smoothed square wave with linear transitions of width d = \u03c0/3. Amplitudes fall as sinc \u00d7 1/n\u00b2, combining square-wave structure with triangle-wave decay. Continuous, so no Gibbs overshoot.',
+    f(x) {
+      const d = PI / 3;
+      const ax = Math.abs(x);
+      if (ax <= PI / 2 - d / 2) return 1;
+      if (ax >= PI / 2 + d / 2) return -1;
+      return 1 - 2 * (ax - (PI / 2 - d / 2)) / d;
+    },
+    coeffs(n) {
+      if (n % 2 === 0) return { a0: 0, an: 0, bn: 0 };
+      const d = PI / 3;
+      const bn = (8 / (PI * d * n * n)) * Math.sin(n * d / 2);
+      return { a0: 0, an: 0, bn };
+    },
+    hasDiscontinuity: false
+  }
+];
+
+/* ======================================================================
+   Colour palette for individual harmonics
+   ====================================================================== */
+const HARMONIC_COLORS = [
+  '#6c8cff', '#ff6c8c', '#6cffc8', '#ffd76c', '#c86cff',
+  '#ff9f6c', '#6cddff', '#b8ff6c', '#ff6cff', '#6cffff',
+  '#ffaa88', '#88aaff', '#aaffaa', '#ffaaff', '#aaffff'
+];
+
+function harmonicColor(i) {
+  return HARMONIC_COLORS[i % HARMONIC_COLORS.length];
+}
+
+/* ======================================================================
+   State
+   ====================================================================== */
+let currentWaveform = WAVEFORMS[0];
+let numHarmonics = 5;
+const N_POINTS = 800;
+
+/* ======================================================================
+   Build UI
+   ====================================================================== */
+const selectorDiv = document.getElementById('waveform-selector');
+WAVEFORMS.forEach(w => {
+  const btn = document.createElement('button');
+  btn.textContent = w.name;
+  btn.dataset.id = w.id;
+  if (w.id === currentWaveform.id) btn.classList.add('active');
+  btn.addEventListener('click', () => {
+    currentWaveform = w;
+    document.querySelectorAll('.selector button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateAll();
+  });
+  selectorDiv.appendChild(btn);
+});
+
+const slider = document.getElementById('harmonics-slider');
+const sliderValue = document.getElementById('harmonics-value');
+slider.addEventListener('input', () => {
+  numHarmonics = parseInt(slider.value);
+  sliderValue.textContent = numHarmonics;
+  updateAll();
+});
+
+/* ======================================================================
+   Generate x values
+   ====================================================================== */
+function linspace(a, b, n) {
+  const arr = new Float64Array(n);
+  const step = (b - a) / (n - 1);
+  for (let i = 0; i < n; i++) arr[i] = a + i * step;
+  return arr;
+}
+
+/* ======================================================================
+   Compute Fourier partial sum at a single x
+   ====================================================================== */
+function fourierPartialSum(waveform, x, N) {
+  const c0 = waveform.coeffs(0);
+  let val = c0.a0 / 2;
+  for (let n = 1; n <= N; n++) {
+    const c = waveform.coeffs(n);
+    val += c.an * Math.cos(n * x) + c.bn * Math.sin(n * x);
+  }
+  return val;
+}
+
+/* ======================================================================
+   Compute individual harmonic at x
+   ====================================================================== */
+function harmonicValue(waveform, n, x) {
+  if (n === 0) {
+    const c0 = waveform.coeffs(0);
+    return c0.a0 / 2;
+  }
+  const c = waveform.coeffs(n);
+  return c.an * Math.cos(n * x) + c.bn * Math.sin(n * x);
+}
+
+/* ======================================================================
+   Plotly layout helpers
+   ====================================================================== */
+const PLOT_BG = '#12121a';
+const GRID_COLOR = '#22223a';
+
+function basePlotLayout(title, yLabel, height) {
+  return {
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: PLOT_BG,
+    font: { family: "'Segoe UI', system-ui, sans-serif", color: '#e0e0e8', size: 12 },
+    title: { text: title, font: { size: 14 } },
+    margin: { l: 50, r: 20, t: 40, b: 40 },
+    height: height,
+    xaxis: {
+      gridcolor: GRID_COLOR,
+      zerolinecolor: '#3a3a55',
+      title: ''
+    },
+    yaxis: {
+      gridcolor: GRID_COLOR,
+      zerolinecolor: '#3a3a55',
+      title: yLabel
+    },
+    legend: {
+      bgcolor: 'rgba(0,0,0,0)',
+      font: { size: 11 },
+      orientation: 'h',
+      y: -0.18,
+      x: 0.5,
+      xanchor: 'center'
+    },
+    dragmode: 'pan'
+  };
+}
+
+/* ======================================================================
+   Draw / update plots
+   ====================================================================== */
+let firstDraw = true;
+
+function updateAll() {
+  /* Update text */
+  document.getElementById('waveform-title').textContent = currentWaveform.name;
+  document.getElementById('waveform-formula').textContent = currentWaveform.formula;
+  document.getElementById('waveform-desc').textContent = currentWaveform.description;
+
+  const xs = linspace(-PI, PI, N_POINTS);
+
+  /* Target waveform */
+  const targetY = Array.from(xs, x => currentWaveform.f(x));
+
+  /* Partial sum */
+  const partialY = Array.from(xs, x => fourierPartialSum(currentWaveform, x, numHarmonics));
+
+  /* Traces */
+  const traces = [];
+
+  traces.push({
+    x: Array.from(xs),
+    y: targetY,
+    mode: 'lines',
+    name: 'Target',
+    line: { color: '#ff6c8c', width: 2, dash: 'dash' }
+  });
+
+  traces.push({
+    x: Array.from(xs),
+    y: partialY,
+    mode: 'lines',
+    name: `Partial sum (N=${numHarmonics})`,
+    line: { color: '#ffffff', width: 2.5 }
+  });
+
+  /* Individual harmonics (show first 15 max to avoid clutter) */
+  const showMax = Math.min(numHarmonics, 15);
+  for (let n = 1; n <= showMax; n++) {
+    const c = currentWaveform.coeffs(n);
+    if (Math.abs(c.an) < 1e-12 && Math.abs(c.bn) < 1e-12) continue;
+    const hy = Array.from(xs, x => harmonicValue(currentWaveform, n, x));
+    traces.push({
+      x: Array.from(xs),
+      y: hy,
+      mode: 'lines',
+      name: `n=${n}`,
+      line: { color: harmonicColor(n - 1), width: 1 },
+      opacity: 0.55
+    });
+  }
+
+  /* Gibbs annotation */
+  const annotations = [];
+  if (currentWaveform.hasDiscontinuity && numHarmonics >= 2) {
+    /* Find max overshoot */
+    let maxOver = 0, maxOverX = 0, targetAtMax = 0;
+    for (let i = 0; i < N_POINTS; i++) {
+      const diff = partialY[i] - targetY[i];
+      if (Math.abs(diff) > Math.abs(maxOver)) {
+        maxOver = diff;
+        maxOverX = xs[i];
+        targetAtMax = targetY[i];
+      }
+    }
+    if (Math.abs(maxOver) > 0.05) {
+      annotations.push({
+        x: maxOverX,
+        y: targetAtMax + maxOver,
+        xref: 'x',
+        yref: 'y',
+        text: `Gibbs (~${(Math.abs(maxOver / (targetAtMax || 1)) * 100).toFixed(1)}% overshoot)`,
+        showarrow: true,
+        arrowhead: 2,
+        arrowcolor: '#ffd76c',
+        ax: 60,
+        ay: -35,
+        font: { color: '#ffd76c', size: 11 },
+        bgcolor: 'rgba(26,26,36,0.85)',
+        bordercolor: '#ffd76c',
+        borderwidth: 1,
+        borderpad: 4
+      });
+    }
+  }
+
+  const mainLayout = {
+    ...basePlotLayout('Waveform Approximation', 'Amplitude', 420),
+    annotations
+  };
+
+  /* ----- Spectrum ----- */
+  const specN = [];
+  const specMag = [];
+  const specColors = [];
+  for (let n = 0; n <= numHarmonics; n++) {
+    const c = currentWaveform.coeffs(n);
+    let mag;
+    if (n === 0) {
+      mag = Math.abs(c.a0 / 2);
+    } else {
+      mag = Math.sqrt(c.an * c.an + c.bn * c.bn);
+    }
+    specN.push(n);
+    specMag.push(mag);
+    specColors.push(n === 0 ? '#8888a0' : harmonicColor((n - 1) % HARMONIC_COLORS.length));
+  }
+
+  const specTrace = {
+    x: specN,
+    y: specMag,
+    type: 'bar',
+    marker: { color: specColors, line: { width: 0 } },
+    name: 'Magnitude'
+  };
+
+  const specLayout = {
+    ...basePlotLayout('Coefficient Magnitudes', '|c\u2099|', 260),
+    xaxis: {
+      ...basePlotLayout('', '', 0).xaxis,
+      title: 'Harmonic n',
+      dtick: numHarmonics <= 25 ? 1 : 5
+    },
+    showlegend: false,
+    bargap: 0.3
+  };
+
+  const plotConfig = {
+    responsive: true,
+    displayModeBar: false,
+    scrollZoom: true
+  };
+
+  if (firstDraw) {
+    Plotly.newPlot('main-plot', traces, mainLayout, plotConfig);
+    Plotly.newPlot('spectrum-plot', [specTrace], specLayout, plotConfig);
+    firstDraw = false;
+  } else {
+    Plotly.react('main-plot', traces, mainLayout, plotConfig);
+    Plotly.react('spectrum-plot', [specTrace], specLayout, plotConfig);
+  }
+}
+
+/* Initial draw */
+updateAll();
+</script>
+</body>
+</html>
